@@ -125,10 +125,17 @@ class GPXWriter(Writer.Writer):
 
         self.current_time.appendChild(self.current_doc.createTextNode(datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")))
 
-        filename = os.path.join(self.output_dir,
-                                "timeline_%s_%s.gpx" %
-                                (self.min_date.strftime("%Y-%m-%d"), self.max_date.strftime("%Y-%m-%d"))
-                                )
+        count = 1
+
+        while True:
+            filename = os.path.join(self.output_dir,
+                                    "timeline_%s_%s%s.gpx" %
+                                    (self.min_date.strftime("%Y-%m-%d"), self.max_date.strftime("%Y-%m-%d"),
+                                     "_%d" % count if count != 1 else ""))
+            if not os.path.exists(filename):
+                break
+            else:
+                count += 1
 
         with open(filename, "w+") as output_file:
             self.current_doc.writexml(output_file, encoding="UTF-8")

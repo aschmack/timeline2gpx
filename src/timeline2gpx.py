@@ -49,7 +49,7 @@ def main(argv):
     config, paths = parse_args(argv)
 
     if not validate_config(config) or not validate_paths(paths):
-        print(USAGE)
+        print(USAGE % argv[0])
         return 1
 
     filtering_dates = (config["from"].year != 1970 or
@@ -57,10 +57,9 @@ def main(argv):
 
     with GPXWriter.GPXWriter(config["output_dir"], config["max_per_file"]) as writer:
         for path in paths:
-            reader = KMLParser.KMLParser(path)
-
-            for wp in reader.get_waypoints(filtering_dates, config["from"], config["to"]):
-                writer.write_waypoint(wp)
+            with KMLParser.KMLParser(path) as reader:
+                for wp in reader.get_waypoints(filtering_dates, config["from"], config["to"]):
+                    writer.write_waypoint(wp)
 
     print("All done!")
 
@@ -95,6 +94,9 @@ def parse_args(argv):
 
 def validate_config(config):
     is_valid = True
+
+    if len(config.keys()) == 0:
+        return False
 
     try:
         config["from"] = datetime.strptime(config["from"], "%Y-%m-%d")

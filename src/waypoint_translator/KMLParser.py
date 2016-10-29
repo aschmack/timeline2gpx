@@ -4,7 +4,7 @@
 import Waypoint
 
 from datetime import datetime
-from xml.etree import ElementTree
+import io
 
 
 class KMLParserException(Exception):
@@ -19,51 +19,64 @@ class KMLParser(object):
     }
 
     def __init__(self, filename):
-        self.parser = ElementTree.parse(filename)
-        self.document = self.parser.getroot()
+        self.filename = filename
+        self.file = None
+
+    def __enter__(self):
+        self.file = io.open(self.filename, "r")
+        return self
+
+    def __exit__(self, tp, value, tb):
+        if self.file is not None:
+            self.file.close()
+            self.file = None
 
     def get_waypoints(self, date_filter=False, older_than=None, newer_than=None):
-        tracks = self.document.findall("*//{http://www.google.com/kml/ext/2.2}Track")
-
         if date_filter and (older_than is None or newer_than is None):
             raise KMLParserException("Error: cannot specify date_filter=True without supplying both older_than "
                                      "and newer_than!")
 
-        for track in tracks:
-            children = track.iter()
+        if self.file is None:
+            raise KMLParserException("Error: this class must (at the moment) be used in a with statement!")
 
-            current_when = None
+        current_when = None
 
-            for child in children:
-                if child.tag == "{%s}when" % self.namespaces[""]:
-                    if current_when is None:
-                        try:
-                            current_when = datetime.strptime(child.text, "%Y-%m-%dT%H:%M:%SZ")
+        for full_line in self.file:
+            line = full_line.strip(" \t\r\n")
 
-                            if date_filter and (current_when < older_than or current_when > newer_than):
-                                current_when = None
-                        except ValueError as e:
-                            raise KMLParserException("Error: <when> tag value was in an unexpected format: '%s'"
-                                                     % child.text)
-                    else:
-                        raise KMLParserException("Error: Encountered a second <when> tag before hitting a <gx:coord>!")
-                elif child.tag == "{%s}coord" % self.namespaces["gx"]:
-                    if current_when is not None:
-                        coord = child.text.split(" ")
+            if line.startswith("<when>"):
+                inner_text = line[6:-7]
 
-                        if len(coord) != 3:
-                            raise KMLParserException("Error: <gx:coord> tag has too many fields!")
+                if current_when is None:
+                    try:
+                        current_when = datetime.strptime(inner_text, "%Y-%m-%dT%H:%M:%SZ")
 
-                        try:
-                            wp = Waypoint.Waypoint(current_when, float(coord[0]), float(coord[1]), float(coord[2]))
+                        if date_filter and (current_when < older_than or current_when > newer_than):
+                            current_when = None
+                    except ValueError:
+                        raise KMLParserException("Error: <when> tag value was in an unexpected format: '%s'"
+                                                 % inner_text)
+                else:
+                    raise KMLParserException("Error: Encountered a second <when> tag before hitting a <gx:coord>!")
+            elif line.startswith("<gx:coord>"):
+                if current_when is not None:
+                    inner_text = line[10:-11]
 
-                            yield wp
-                        except ValueError:
-                            raise KMLParserException("Error: could not parse this <gx:coord> tag [contents: '%s']"
-                                                     % child.text)
+                    coord = inner_text.split(" ")
 
-                        current_when = None
-                    # else case: allowed to happen if current_when fell outside of the date range (saves parsing time)
+                    if len(coord) != 3:
+                        raise KMLParserException("Error: <gx:coord> tag has too many fields!")
+
+                    try:
+                        wp = Waypoint.Waypoint(current_when, float(coord[1]), float(coord[0]), float(coord[2]))
+
+                        yield wp
+                    except ValueError:
+                        raise KMLParserException("Error: could not parse this <gx:coord> tag [contents: '%s']"
+                                                 % inner_text)
+
+                    current_when = None
+                # else case: allowed to happen if current_when fell outside of the date range (saves parsing time)
 
 if __name__ == "__main__":
     print("Don't run me bro!")
