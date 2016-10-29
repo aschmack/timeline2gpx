@@ -2,6 +2,7 @@
 ***
 This tool was designed to parse the KML files output from Google's Timeline feature and translate them, with timestamps, into GPX files which can be read in Lightroom.
 
+You can [download the EXE from here](https://github.com/aschmack/timeline2gpx/raw/master/dist/timeline2gpx.exe), or [download the package as a whole to use via python from here](https://github.com/aschmack/timeline2gpx/archive/master.zip).
 ## Usage
 ```
 timeline2gpx.py [options] <KML file>...
