@@ -3,9 +3,9 @@
 This tool was designed to parse the KML files output from Google's Timeline feature and translate them, with timestamps, into GPX files which can be read in Lightroom.
 
 ## Usage
-
+```
 timeline2gpx.py [options] <KML file>...
-   --or--
+  **or**
 timeline2gpx.exe [options] <KML file>...
     Parse one or more timeline KML files exported from Google and outputs a standard GPX file
     for import into Lightroom or other tools.
@@ -22,3 +22,4 @@ timeline2gpx.exe [options] <KML file>...
                                             must exist beforehand.
         -m <int>, --max-points <int>        Set the maximum number of points to output per file. Defaults
                                             to 100000.
+```
